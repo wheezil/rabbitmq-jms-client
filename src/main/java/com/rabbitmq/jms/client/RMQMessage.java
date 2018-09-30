@@ -25,6 +25,17 @@ import java.util.Map.Entry;
 public abstract class RMQMessage implements Message, Cloneable {
     /** Logger shared with derived classes */
     protected final Logger logger = LoggerFactory.getLogger(RMQMessage.class);
+	
+	// Stopgap fix for issue #47 - by default, set reply-to queues as "declared"
+	private static boolean autoDeclaredReplyToQueue = true;
+
+	public static boolean isAutoDeclaredReplyToQueue() {
+		return autoDeclaredReplyToQueue;
+	}
+
+	public static void setAutoDeclaredReplyToQueue(boolean autoDeclaredReplyToQueue) {
+		RMQMessage.autoDeclaredReplyToQueue = autoDeclaredReplyToQueue;
+	}
 
     protected void loggerDebugByteArray(String format, byte[] buffer, Object arg) {
         if (logger.isDebugEnabled()) {
@@ -265,7 +276,11 @@ public abstract class RMQMessage implements Message, Cloneable {
      */
     @Override
     public Destination getJMSReplyTo() throws JMSException {
-        return (Destination) this.getObjectProperty(JMS_MESSAGE_REPLY_TO);
+        RMQDestination replyQueue = (RMQDestination)this.getObjectProperty(JMS_MESSAGE_REPLY_TO);
+		if (autoDeclaredReplyToQueue) {
+			replyQueue.setDeclared(true);
+		}
+		return replyQueue;
     }
 
     /**
